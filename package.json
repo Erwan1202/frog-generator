@@ -9,6 +9,11 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.16.0"
+    "@astrojs/node": "^9.5.1",
+    "@tailwindcss/vite": "^4.1.17",
+    "astro": "^5.16.0",
+    "bcryptjs": "^3.0.3",
+    "mongodb": "^7.0.0",
+    "tailwindcss": "^4.1.17"
   }
 }
