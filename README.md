@@ -1,43 +1,48 @@
-# Astro Starter Kit: Minimal
+# 🐸 Froggy Love
 
-```sh
-npm create astro@latest -- --template minimal
-```
+**Une petite application web faite avec 💚 pour les amoureux des grenouilles.**
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Ce projet a été imaginé comme un petit cadeau pour faire sourire quelqu'un. Le concept est simple : une dose infinie de grenouilles mignonnes, directement sur le téléphone.
 
-## 🚀 Project Structure
+## ✨ Ce que ça fait
 
-Inside of your Astro project, you'll see the following folders and files:
+- **🔍 Découverte Infinie :** Une nouvelle photo de grenouille à chaque clic.
+- **🧠 Zéro Répétition :** Le site se souvient des grenouilles déjà vues pour ne jamais montrer deux fois la même.
+- **❤️ Collection Privée :** Un système de favoris pour garder précieusement les meilleures photos dans une galerie personnelle.
+- **📱 Design "App-Like" :** Une interface sombre, moderne et fluide, pensée pour être utilisée sur mobile.
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+## 🛠️ Comment c'est fait ?
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+C'est un mélange de technologies modernes pour que ce soit rapide et fluide :
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+- **Astro :** Pour la rapidité du site.
+- **Tailwind CSS :** Pour le joli design (Glassmorphism, Dark mode).
+- **MongoDB :** Pour sauvegarder les utilisateurs et leurs collections.
+- **Unsplash API :** La source magique des photos HD.
 
-Any static assets, like images, can be placed in the `public/` directory.
+## 🚀 Lancer le projet (Pour les curieux)
 
-## 🧞 Commands
+Si tu veux le faire tourner chez toi :
 
-All commands are run from the root of the project, from a terminal:
+1.  **Clone le repo :**
+    ```bash
+    git clone [https://github.com/ton-pseudo/froggy-love.git](https://github.com/ton-pseudo/froggy-love.git)
+    cd froggy-love
+    ```
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+2.  **Installe tout :**
+    ```bash
+    npm install
+    ```
 
-## 👀 Want to learn more?
+3.  **Configure les secrets :**
+    Crée un fichier `.env` et ajoutes-y tes clés (MongoDB & Unsplash).
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+4.  **Décolle :**
+    ```bash
+    npm run dev
+    ```
+
+---
+
+*Fait avec beaucoup d'amour et un peu de code.* ☕️🐸
