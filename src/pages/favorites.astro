@@ -1,0 +1,91 @@
+---
+import clientPromise from "../lib/mongodb";
+import { ObjectId } from "mongodb";
+
+const userIdCookie = Astro.cookies.get("user_id");
+
+if (!userIdCookie) {
+  return Astro.redirect("/login");
+}
+
+const client = await clientPromise;
+const db = client.db("frog_app");
+const users = db.collection("users");
+
+const user = await users.findOne({ _id: new ObjectId(userIdCookie.value) });
+
+if (!user) return Astro.redirect("/login");
+
+if (Astro.request.method === "POST") {
+    const data = await Astro.request.formData();
+    const idToDelete = data.get("id_to_delete");
+
+    if (idToDelete) {
+        await users.updateOne(
+            { _id: user._id },
+            { $pull: { favorites: { id: idToDelete } } } as any
+        );
+        return Astro.redirect("/favorites");
+    }
+}
+
+const favorites = user.favorites || [];
+---
+
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mes Favorites - Froggy</title>
+</head>
+<body class="bg-stone-900 text-white min-h-screen font-sans">
+
+    <nav class="sticky top-0 z-50 w-full p-4 flex justify-between items-center bg-stone-800 shadow-md border-b border-stone-700">
+        <a href="/" class="flex items-center gap-2 text-green-400 font-bold hover:text-green-300 transition">
+            ⬅ Retour aux grenouilles
+        </a>
+        <div class="text-sm text-gray-400">
+            Collection de {user.username}
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-6">
+        <h1 class="text-3xl font-bold mb-8 text-center text-green-400">
+            Mes Coups de Cœur 💚
+        </h1>
+
+        {favorites.length === 0 ? (
+            <div class="text-center py-20 bg-stone-800 rounded-xl border border-stone-700">
+                <p class="text-xl text-gray-300">Ta collection est vide...</p>
+                <p class="text-gray-500 mb-4">Va vite liker des grenouilles !</p>
+                <a href="/" class="inline-block px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full transition">
+                    Découvrir
+                </a>
+            </div>
+        ) : (
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {favorites.map((frog: any) => (
+                    <div class="relative group rounded-xl overflow-hidden shadow-lg border border-stone-700 aspect-[3/4]">
+                        
+                        <img 
+                            src={frog.url} 
+                            alt="Grenouille" 
+                            class="w-full h-full object-cover transition duration-500 group-hover:scale-110"
+                            loading="lazy"
+                        />
+                        
+                        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <form method="POST">
+                                <input type="hidden" name="id_to_delete" value={frog.id} />
+                                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white p-3 rounded-full transform hover:scale-110 transition shadow-xl" title="Supprimer">
+                                    🗑️
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+                ))}
+            </div>
+        )}
+    </main>
+</body>
+</html>

@@ -1,0 +1,95 @@
+---
+import clientPromise from "../lib/mongodb";
+import bcrypt from "bcryptjs";
+
+let message = "";
+let error = false;
+
+if (Astro.request.method === "POST") {
+  try {
+    const data = await Astro.request.formData();
+    const username = data.get("username")?.toString();
+    const password = data.get("password")?.toString();
+
+    if (!username || !password) {
+      message = "Tous les champs sont requis.";
+      error = true;
+    } else {
+      const client = await clientPromise;
+      const db = client.db("frog_app");
+      const users = db.collection("users");
+
+      const existingUser = await users.findOne({ username });
+      if (existingUser) {
+        message = "Ce pseudo est déjà pris par une autre grenouille !";
+        error = true;
+      } else {
+        const hashedPassword = await bcrypt.hash(password.toString(), 10);
+
+        await users.insertOne({
+          username,
+          password: hashedPassword,
+          favorites: [],
+          createdAt: new Date()
+        });
+
+        return Astro.redirect("/login");
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    message = "Une erreur serveur est survenue.";
+    error = true;
+  }
+}
+---
+
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Inscription - Froggy</title>
+</head>
+<body class="bg-green-50 min-h-screen flex items-center justify-center font-sans">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-t-4 border-green-500">
+        <h1 class="text-3xl font-bold text-green-700 mb-6 text-center">Rejoindre la mare 🐸</h1>
+
+        {message && (
+            <div class={`p-3 mb-4 rounded ${error ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                {message}
+            </div>
+        )}
+
+        <form method="POST" class="flex flex-col gap-4">
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Pseudo</label>
+                <input 
+                    type="text" 
+                    name="username" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                />
+            </div>
+            
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Mot de passe</label>
+                <input 
+                    type="password" 
+                    name="password" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                />
+            </div>
+
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded transition-colors mt-2">
+                S'inscrire
+            </button>
+        </form>
+
+        <p class="mt-4 text-center text-sm text-gray-600">
+            Déjà un compte ? <a href="/login" class="text-green-600 hover:underline">Se connecter</a>
+        </p>
+    </div>
+
+</body>
+</html>
