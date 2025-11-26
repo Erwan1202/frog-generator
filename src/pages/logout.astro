@@ -1,0 +1,5 @@
+---
+// Supprimer le cookie et rediriger vers la page de login
+Astro.cookies.delete("user_id");
+return Astro.redirect("/login");
+---
