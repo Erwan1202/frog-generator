@@ -60,9 +60,17 @@ if (accessKey) {
           foundUnique = true;
           await users.updateOne({ _id: user._id }, { $push: { seen_images: frogId } });
         }
-      } else { 
-        error = `Erreur API Unsplash: ${response.statusText}`;
-        break; 
+      } else {
+        const rateLimit = response.headers.get('X-Ratelimit-Limit');
+        const rateLimitRemaining = response.headers.get('X-Ratelimit-Remaining');
+        console.log(`Unsplash API Stats: Limit=${rateLimit}, Remaining=${rateLimitRemaining}`);
+
+        if (response.status === 403) {
+            error = "Erreur API Unsplash: Forbidden. Vous avez peut-être dépassé votre limite d'appels API (50/heure pour le développement).";
+        } else {
+            error = `Erreur API Unsplash: ${response.statusText}`;
+        }
+        break;
       }
     } catch (err) { 
       error = "Erreur de connexion à l'API Unsplash.";
