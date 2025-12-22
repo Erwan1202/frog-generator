@@ -19,6 +19,7 @@ if (!user) return Astro.redirect("/login");
 
 let currentFrog = null;
 let message = "";
+let error = "";
 
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
@@ -36,30 +37,45 @@ if (Astro.request.method === "POST") {
 }
 
 const accessKey = import.meta.env.UNSPLASH_ACCESS_KEY;
+if (!accessKey) {
+  error = "La clé d'accès Unsplash est manquante. Veuillez vérifier votre configuration.";
+}
+
 let attempts = 0;
 let foundUnique = false;
 
-while (!foundUnique && attempts < 3) {
-  attempts++;
-  try {
-    const response = await fetch(`https://api.unsplash.com/photos/random?query=frog&orientation=portrait&client_id=${accessKey}`);
-    if (response.ok) {
-      const data = await response.json();
-      const frogId = data.id;
-      const frogUrl = data.urls.regular;
-      const hasSeen = user.seen_images?.includes(frogId);
+if (accessKey) {
+  while (!foundUnique && attempts < 3) {
+    attempts++;
+    try {
+      const response = await fetch(`https://api.unsplash.com/photos/random?query=frog&orientation=portrait&client_id=${accessKey}`);
+      if (response.ok) {
+        const data = await response.json();
+        const frogId = data.id;
+        const frogUrl = data.urls.regular;
+        const hasSeen = user.seen_images?.includes(frogId);
 
-      if (!hasSeen) {
-        currentFrog = { id: frogId, url: frogUrl, photographer: data.user.name, download: data.links.html };
-        foundUnique = true;
-        await users.updateOne({ _id: user._id }, { $push: { seen_images: frogId } });
+        if (!hasSeen) {
+          currentFrog = { id: frogId, url: frogUrl, photographer: data.user.name, download: data.links.html };
+          foundUnique = true;
+          await users.updateOne({ _id: user._id }, { $push: { seen_images: frogId } });
+        }
+      } else { 
+        error = `Erreur API Unsplash: ${response.statusText}`;
+        break; 
       }
-    } else { break; }
-  } catch (err) { break; }
+    } catch (err) { 
+      error = "Erreur de connexion à l'API Unsplash.";
+      break; 
+    }
+  }
 }
 
 if (!currentFrog) {
   currentFrog = { id: "backup", url: "https://images.unsplash.com/photo-1579389083046-e3df9c2b3325", photographer: "Backup Frog" };
+  if (!error) {
+    error = "Impossible de trouver une nouvelle grenouille pour le moment. Voici une grenouille de secours."
+  }
 }
 ---
 
@@ -103,6 +119,12 @@ if (!currentFrog) {
             {message && (
                 <div class="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-emerald-500/90 backdrop-blur px-4 py-2 rounded-full text-xs font-bold shadow-lg animate-bounce text-white whitespace-nowrap">
                     {message}
+                </div>
+            )}
+
+            {error && (
+                <div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-red-500/90 backdrop-blur px-4 py-2 rounded-full text-xs font-bold shadow-lg text-white whitespace-nowrap">
+                    {error}
                 </div>
             )}
 
