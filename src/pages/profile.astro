@@ -1,0 +1,448 @@
+---
+import clientPromise from "../lib/mongodb";
+import { ObjectId } from "mongodb";
+import "../styles/global.css";
+
+const userIdCookie = Astro.cookies.get("user_id");
+if (!userIdCookie) return Astro.redirect("/login");
+
+const client = await clientPromise;
+const db = client.db("frog_app");
+const users = db.collection("users");
+
+let user;
+try {
+    user = await users.findOne({ _id: new ObjectId(userIdCookie.value) });
+} catch (e) {
+    return Astro.redirect("/login");
+}
+
+if (!user) return Astro.redirect("/login");
+
+let message = "";
+let error = "";
+
+if (Astro.request.method === "POST") {
+    const formData = await Astro.request.formData();
+    const action = formData.get("action");
+
+    if (action === "update_profile") {
+        const displayName = formData.get("displayName")?.toString().trim();
+        const bio = formData.get("bio")?.toString().trim();
+        const favoriteEmoji =
+            formData.get("favoriteEmoji")?.toString().trim() || "🐸";
+
+        await users.updateOne(
+            { _id: user._id },
+            {
+                $set: {
+                    displayName: displayName || user.username,
+                    bio: bio || "",
+                    favoriteEmoji: favoriteEmoji,
+                    updatedAt: new Date(),
+                },
+            },
+        );
+
+        message = "Profil mis à jour avec succès ! 🌊";
+        user = await users.findOne({ _id: user._id });
+    }
+}
+
+const stats = {
+    favorites: user.favorites?.length || 0,
+    friends: user.friends?.length || 0,
+    memberSince: user.createdAt
+        ? new Date(user.createdAt).toLocaleDateString("fr-FR", {
+              month: "long",
+              year: "numeric",
+          })
+        : "Inconnue",
+};
+
+const emojiOptions = [
+    "🐸",
+    "🐢",
+    "🦎",
+    "🐊",
+    "🌊",
+    "💧",
+    "🩵",
+    "✨",
+    "🌟",
+    "🎯",
+    "🎨",
+    "🎭",
+];
+---
+
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Mon Profil - Froggy</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            body {
+                font-family: "Nunito", sans-serif;
+            }
+        </style>
+    </head>
+    <body class="bg-slate-950 min-h-screen text-white pb-24">
+        <!-- Aquatic Background -->
+        <div class="fixed inset-0 overflow-hidden pointer-events-none">
+            <div
+                class="absolute inset-0 bg-gradient-to-b from-slate-950 via-cyan-950/20 to-blue-950/30"
+            >
+            </div>
+            <div
+                class="absolute top-[-10%] left-[-10%] w-[400px] h-[400px] bg-indigo-600/15 rounded-full blur-[120px] animate-blob"
+            >
+            </div>
+            <div
+                class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-cyan-500/15 rounded-full blur-[140px] animate-blob"
+                style="animation-delay: -5s;"
+            >
+            </div>
+
+            <div
+                class="absolute bottom-0 left-[30%] w-3 h-3 bg-cyan-400/20 rounded-full animate-bubble"
+                style="animation-delay: 2s;"
+            >
+            </div>
+            <div
+                class="absolute bottom-0 right-[20%] w-4 h-4 bg-blue-400/15 rounded-full animate-bubble"
+                style="animation-delay: 0s;"
+            >
+            </div>
+        </div>
+
+        <!-- Header -->
+        <nav
+            class="sticky top-0 z-40 bg-slate-950/70 backdrop-blur-xl border-b border-cyan-500/10"
+        >
+            <div
+                class="max-w-2xl mx-auto px-4 py-4 flex justify-between items-center"
+            >
+                <div class="flex items-center gap-3">
+                    <a
+                        href="/"
+                        class="text-cyan-300/50 hover:text-white transition-colors"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="2"
+                            stroke="currentColor"
+                            class="w-6 h-6"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M15.75 19.5L8.25 12l7.5-7.5"></path>
+                        </svg>
+                    </a>
+                    <h1 class="text-xl font-black text-white">Mon Profil</h1>
+                </div>
+                <a
+                    href="/logout"
+                    class="text-xs text-red-400 hover:text-red-300 font-bold"
+                    >Déconnexion</a
+                >
+            </div>
+        </nav>
+
+        <main class="relative z-10 max-w-2xl mx-auto px-4 py-6">
+            <!-- Messages -->
+            {
+                message && (
+                    <div class="mb-6 p-4 rounded-xl bg-cyan-500/20 border border-cyan-500/30 animate-slide-up">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl">✅</span>
+                            <span class="text-cyan-300 font-semibold text-sm">
+                                {message}
+                            </span>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                error && (
+                    <div class="mb-6 p-4 rounded-xl bg-red-500/20 border border-red-500/30 animate-slide-up">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl">⚠️</span>
+                            <span class="text-red-300 font-semibold text-sm">
+                                {error}
+                            </span>
+                        </div>
+                    </div>
+                )
+            }
+
+            <!-- Profile Header Card -->
+            <div
+                class="glass rounded-3xl p-6 mb-6 animate-slide-up border border-cyan-500/10"
+            >
+                <div class="flex items-center gap-5">
+                    <!-- Avatar -->
+                    <div class="relative">
+                        <div
+                            class="w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-xl glow-cyan"
+                        >
+                            <span class="text-5xl"
+                                >{user.favoriteEmoji || "🐸"}</span
+                            >
+                        </div>
+                        <div
+                            class="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center border-2 border-slate-950"
+                        >
+                            <span class="text-xs">✏️</span>
+                        </div>
+                    </div>
+
+                    <!-- Info -->
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-black text-white">
+                            {user.displayName || user.username}
+                        </h2>
+                        <p class="text-cyan-300/50 text-sm">@{user.username}</p>
+                        {
+                            user.bio && (
+                                <p class="text-cyan-100/70 text-sm mt-2 line-clamp-2">
+                                    {user.bio}
+                                </p>
+                            )
+                        }
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div
+                    class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-cyan-500/10"
+                >
+                    <div class="text-center">
+                        <p class="text-2xl font-black text-cyan-400">
+                            {stats.favorites}
+                        </p>
+                        <p class="text-xs text-cyan-300/40">Grenouilles</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-black text-blue-400">
+                            {stats.friends}
+                        </p>
+                        <p class="text-xs text-cyan-300/40">Amis</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm font-bold text-cyan-300/60">
+                            {stats.memberSince}
+                        </p>
+                        <p class="text-xs text-cyan-300/40">Membre depuis</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Profile Form -->
+            <div
+                class="glass rounded-3xl p-6 animate-slide-up border border-cyan-500/10"
+                style="animation-delay: 0.1s;"
+            >
+                <h3
+                    class="text-lg font-bold text-white mb-6 flex items-center gap-2"
+                >
+                    <span>⚙️</span> Modifier le profil
+                </h3>
+
+                <form method="POST" class="space-y-5">
+                    <input type="hidden" name="action" value="update_profile" />
+
+                    <!-- Display Name -->
+                    <div class="space-y-2">
+                        <label class="block text-cyan-100/80 text-sm font-bold"
+                            >Nom d'affichage</label
+                        >
+                        <input
+                            type="text"
+                            name="displayName"
+                            value={user.displayName || user.username}
+                            maxlength="30"
+                            class="w-full px-4 py-3 bg-white/5 border border-cyan-500/20 rounded-xl text-white placeholder-cyan-200/30 focus:outline-none focus:border-cyan-400/50 focus:bg-white/10 transition-all"
+                            placeholder="Comment veux-tu être appelé ?"
+                        />
+                    </div>
+
+                    <!-- Bio -->
+                    <div class="space-y-2">
+                        <label class="block text-cyan-100/80 text-sm font-bold"
+                            >Bio</label
+                        >
+                        <textarea
+                            name="bio"
+                            rows="3"
+                            maxlength="150"
+                            class="w-full px-4 py-3 bg-white/5 border border-cyan-500/20 rounded-xl text-white placeholder-cyan-200/30 focus:outline-none focus:border-cyan-400/50 focus:bg-white/10 transition-all resize-none"
+                            placeholder="Parle-nous de toi et de ta passion pour les grenouilles..."
+                            >{user.bio || ""}</textarea
+                        >
+                        <p class="text-xs text-cyan-300/40">
+                            Max 150 caractères
+                        </p>
+                    </div>
+
+                    <!-- Emoji Selection -->
+                    <div class="space-y-2">
+                        <label class="block text-cyan-100/80 text-sm font-bold"
+                            >Ton emoji</label
+                        >
+                        <div class="flex flex-wrap gap-2">
+                            {
+                                emojiOptions.map((emoji) => (
+                                    <label class="cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="favoriteEmoji"
+                                            value={emoji}
+                                            checked={
+                                                emoji ===
+                                                (user.favoriteEmoji || "🐸")
+                                            }
+                                            class="sr-only peer"
+                                        />
+                                        <div
+                                            class="w-12 h-12 rounded-xl bg-white/5 border border-cyan-500/20 flex items-center justify-center text-2xl
+                                            peer-checked:bg-cyan-500/20 peer-checked:border-cyan-400/50 peer-checked:shadow-lg peer-checked:shadow-cyan-500/20
+                                            hover:bg-white/10 transition-all"
+                                        >
+                                            {emoji}
+                                        </div>
+                                    </label>
+                                ))
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Submit -->
+                    <button
+                        type="submit"
+                        class="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] glow-cyan-hover"
+                    >
+                        Sauvegarder les modifications
+                    </button>
+                </form>
+            </div>
+
+            <!-- Quick Links -->
+            <div
+                class="mt-6 space-y-3 animate-slide-up"
+                style="animation-delay: 0.2s;"
+            >
+                <a
+                    href="/social"
+                    class="flex items-center justify-between p-4 glass rounded-xl border border-cyan-500/10 hover:bg-white/10 transition-all group"
+                >
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center"
+                        >
+                            <span class="text-xl">👥</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-white">Espace Social</p>
+                            <p class="text-xs text-cyan-300/40">
+                                Voir tes amis et leurs collections
+                            </p>
+                        </div>
+                    </div>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2"
+                        stroke="currentColor"
+                        class="w-5 h-5 text-cyan-300/40 group-hover:text-white group-hover:translate-x-1 transition-all"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M8.25 4.5l7.5 7.5-7.5 7.5"></path>
+                    </svg>
+                </a>
+
+                <a
+                    href="/favorites"
+                    class="flex items-center justify-between p-4 glass rounded-xl border border-cyan-500/10 hover:bg-white/10 transition-all group"
+                >
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center"
+                        >
+                            <span class="text-xl">💙</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-white">Ma Collection</p>
+                            <p class="text-xs text-cyan-300/40">
+                                {stats.favorites} grenouilles sauvées
+                            </p>
+                        </div>
+                    </div>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2"
+                        stroke="currentColor"
+                        class="w-5 h-5 text-cyan-300/40 group-hover:text-white group-hover:translate-x-1 transition-all"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M8.25 4.5l7.5 7.5-7.5 7.5"></path>
+                    </svg>
+                </a>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav
+            class="fixed bottom-0 left-0 w-full bg-slate-950/80 backdrop-blur-xl border-t border-cyan-500/10 flex justify-around py-4 z-50"
+        >
+            <a
+                href="/"
+                class="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors"
+            >
+                <span class="text-xl">🏠</span>
+                <span class="text-[10px] font-bold">Accueil</span>
+            </a>
+            <a
+                href="/favorites"
+                class="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors"
+            >
+                <span class="text-xl">❤️</span>
+                <span class="text-[10px] font-bold">Favoris</span>
+            </a>
+            <a
+                href="/social"
+                class="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors"
+            >
+                <span class="text-xl">👥</span>
+                <span class="text-[10px] font-bold">Social</span>
+            </a>
+            <a
+                href="/profile"
+                class="flex flex-col items-center gap-1 text-cyan-400"
+            >
+                <div class="relative">
+                    <span
+                        class="absolute -inset-2 bg-cyan-500/20 rounded-full blur-md"
+                    ></span>
+                    <span class="relative text-xl">👤</span>
+                </div>
+                <span class="text-[10px] font-bold">Profil</span>
+            </a>
+        </nav>
+    </body>
+</html>

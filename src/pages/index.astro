@@ -13,7 +13,9 @@ const users = db.collection("users");
 let user;
 try {
   user = await users.findOne({ _id: new ObjectId(userIdCookie.value) });
-} catch (e) { return Astro.redirect("/login"); }
+} catch (e) {
+  return Astro.redirect("/login");
+}
 
 if (!user) return Astro.redirect("/login");
 
@@ -24,21 +26,22 @@ let error = "";
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
   const action = formData.get("action");
-  
+
   if (action === "like") {
     const urlToSave = formData.get("url");
     const idToSave = formData.get("id");
     await users.updateOne(
       { _id: user._id },
-      { $addToSet: { favorites: { id: idToSave, url: urlToSave } } }
+      { $addToSet: { favorites: { id: idToSave, url: urlToSave } } },
     );
-    message = "Ajoutée à ta collection ! ✨";
+    message = "Ajoutée à ta collection ! 🌊";
   }
 }
 
 const accessKey = import.meta.env.UNSPLASH_ACCESS_KEY;
 if (!accessKey) {
-  error = "La clé d'accès Unsplash est manquante. Veuillez vérifier votre configuration.";
+  error =
+    "La clé d'accès Unsplash est manquante. Veuillez vérifier votre configuration.";
 }
 
 let attempts = 0;
@@ -48,7 +51,9 @@ if (accessKey) {
   while (!foundUnique && attempts < 3) {
     attempts++;
     try {
-      const response = await fetch(`https://api.unsplash.com/photos/random?query=frog&orientation=portrait&client_id=${accessKey}`);
+      const response = await fetch(
+        `https://api.unsplash.com/photos/random?query=frog&orientation=portrait&client_id=${accessKey}`,
+      );
       if (response.ok) {
         const data = await response.json();
         const frogId = data.id;
@@ -56,129 +61,549 @@ if (accessKey) {
         const hasSeen = user.seen_images?.includes(frogId);
 
         if (!hasSeen) {
-          currentFrog = { id: frogId, url: frogUrl, photographer: data.user.name, download: data.links.html };
+          currentFrog = {
+            id: frogId,
+            url: frogUrl,
+            photographer: data.user.name,
+            download: data.links.html,
+          };
           foundUnique = true;
-          await users.updateOne({ _id: user._id }, { $push: { seen_images: frogId } });
+          await users.updateOne(
+            { _id: user._id },
+            { $push: { seen_images: frogId } },
+          );
         }
       } else {
-        const rateLimit = response.headers.get('X-Ratelimit-Limit');
-        const rateLimitRemaining = response.headers.get('X-Ratelimit-Remaining');
-        console.log(`Unsplash API Stats: Limit=${rateLimit}, Remaining=${rateLimitRemaining}`);
-
         if (response.status === 403) {
-            error = "Erreur API Unsplash: Forbidden. Vous avez peut-être dépassé votre limite d'appels API (50/heure pour le développement).";
+          error = "Limite API Unsplash atteinte (50/heure).";
         } else {
-            error = `Erreur API Unsplash: ${response.statusText}`;
+          error = `Erreur API: ${response.statusText}`;
         }
         break;
       }
-    } catch (err) { 
+    } catch (err) {
       error = "Erreur de connexion à l'API Unsplash.";
-      break; 
+      break;
     }
   }
 }
 
 if (!currentFrog) {
-  currentFrog = { id: "backup", url: "https://images.unsplash.com/photo-1579389083046-e3df9c2b3325", photographer: "Backup Frog" };
+  currentFrog = {
+    id: "backup",
+    url: "https://images.unsplash.com/photo-1579389083046-e3df9c2b3325",
+    photographer: "Backup Frog",
+  };
   if (!error) {
-    error = "Impossible de trouver une nouvelle grenouille pour le moment. Voici une grenouille de secours."
+    error = "Voici une grenouille de secours.";
   }
 }
 ---
 
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Froggy Love</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Froggy Love 🐸</title>
+    <meta
+      name="description"
+      content="Découvre et collectionne les plus belles grenouilles du monde !"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        body { font-family: 'Nunito', sans-serif; }
-        ::-webkit-scrollbar { display: none; }
-    </style>
-</head>
-<body class="bg-gray-900 min-h-[100dvh] text-white overflow-hidden relative">
+      body {
+        font-family: "Nunito", sans-serif;
+      }
 
-    <div class="absolute inset-0 opacity-30 pointer-events-none">
-        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-green-500 rounded-full blur-[100px]"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-emerald-600 rounded-full blur-[100px]"></div>
+      @keyframes card-appear {
+        from {
+          opacity: 0;
+          transform: scale(0.8) translateY(50px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      .card-animate {
+        animation: card-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      }
+      .btn-press:active {
+        transform: scale(0.9);
+      }
+
+      .neon-blue {
+        box-shadow:
+          0 0 20px rgba(6, 182, 212, 0.4),
+          0 0 40px rgba(6, 182, 212, 0.2),
+          0 0 60px rgba(6, 182, 212, 0.1);
+      }
+
+      .neon-red {
+        box-shadow:
+          0 0 15px rgba(239, 68, 68, 0.3),
+          0 0 30px rgba(239, 68, 68, 0.15);
+      }
+    </style>
+  </head>
+  <body class="bg-slate-950 min-h-[100dvh] text-white overflow-hidden relative">
+    <!-- Animated Aquatic Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div
+        class="absolute inset-0 bg-gradient-to-b from-slate-950 via-cyan-950/20 to-blue-950/30"
+      >
+      </div>
+
+      <div
+        class="absolute top-[-15%] left-[-15%] w-[500px] h-[500px] bg-cyan-500/20 rounded-full blur-[120px] animate-blob"
+      >
+      </div>
+      <div
+        class="absolute bottom-[-15%] right-[-15%] w-[600px] h-[600px] bg-blue-500/15 rounded-full blur-[150px] animate-blob"
+        style="animation-delay: -4s;"
+      >
+      </div>
+      <div
+        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-sky-500/10 rounded-full blur-[100px] animate-blob"
+        style="animation-delay: -8s;"
+      >
+      </div>
+
+      <!-- Bubbles -->
+      <div
+        class="absolute bottom-0 left-[15%] w-3 h-3 bg-cyan-400/30 rounded-full animate-bubble"
+      >
+      </div>
+      <div
+        class="absolute bottom-0 left-[45%] w-4 h-4 bg-blue-400/20 rounded-full animate-bubble"
+        style="animation-delay: 2s;"
+      >
+      </div>
+      <div
+        class="absolute bottom-0 right-[25%] w-3 h-3 bg-sky-400/25 rounded-full animate-bubble"
+        style="animation-delay: 4s;"
+      >
+      </div>
     </div>
 
-    <main class="relative z-10 h-[100dvh] flex flex-col p-4 pb-24 max-w-2xl mx-auto w-full">
-        
-        <header class="flex-none flex justify-between items-center py-2 mb-2">
-            <div class="flex flex-col">
-                <span class="text-[10px] text-emerald-400 font-bold tracking-widest uppercase">Découverte</span>
-                <h1 class="text-2xl font-black">Froggy 🐸</h1>
-            </div>
-            <div class="flex items-center gap-3">
-                <a href="/logout" class="px-4 py-2 text-xs font-bold text-white bg-red-600/50 hover:bg-red-600 border border-red-500/50 rounded-full transition-all">
-                    Déconnexion
-                </a>
-                <div class="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/10">
-                    <span class="text-lg text-white font-bold">{user.username.charAt(0).toUpperCase()}</span>
-                </div>
-            </div>
-        </header>
+    <!-- Subtle Grid Pattern -->
+    <div
+      class="fixed inset-0 opacity-[0.02] pointer-events-none"
+      style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 40px 40px;"
+    >
+    </div>
 
-        <div class="flex-1 min-h-0 relative w-full bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 group mx-auto md:max-w-sm md:aspect-[3/4]">
-            
-            {message && (
-                <div class="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-emerald-500/90 backdrop-blur px-4 py-2 rounded-full text-xs font-bold shadow-lg animate-bounce text-white whitespace-nowrap">
-                    {message}
-                </div>
-            )}
-
-            {error && (
-                <div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-red-500/90 backdrop-blur px-4 py-2 rounded-full text-xs font-bold shadow-lg text-white whitespace-nowrap">
-                    {error}
-                </div>
-            )}
-
-            <img 
-                src={currentFrog.url} 
-                class="absolute inset-0 w-full h-full object-cover"
-                alt="Frog"
-            />
-            
-            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-
-            <div class="absolute bottom-0 left-0 w-full p-6">
-                <p class="text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-1">Photographe</p>
-                <h2 class="text-xl font-bold text-white mb-1 leading-tight">{currentFrog.photographer}</h2>
-            </div>
+    <main
+      class="relative z-10 h-[100dvh] flex flex-col p-4 pb-24 max-w-2xl mx-auto w-full"
+    >
+      <!-- Header -->
+      <header
+        class="flex-none flex justify-between items-center py-3 mb-4 animate-slide-up"
+      >
+        <div class="flex flex-col">
+          <span
+            class="text-[10px] text-cyan-400 font-bold tracking-[0.2em] uppercase"
+            >Découverte</span
+          >
+          <h1
+            class="text-2xl font-black bg-gradient-to-r from-white via-cyan-100 to-blue-300 bg-clip-text text-transparent"
+          >
+            Froggy 🐸
+          </h1>
         </div>
-
-        <div class="flex-none mt-6 flex justify-center items-center gap-8 h-24">
-            <form method="POST">
-                <input type="hidden" name="action" value="next" />
-                <button type="submit" class="w-16 h-16 flex items-center justify-center rounded-full bg-gray-800/50 backdrop-blur text-white border border-white/10 hover:bg-red-500/20 hover:border-red-500 transition-all active:scale-90 shadow-lg">
-                    ❌
-                </button>
-            </form>
-
-            <form method="POST">
-                <input type="hidden" name="action" value="like" />
-                <input type="hidden" name="url" value={currentFrog.url} />
-                <input type="hidden" name="id" value={currentFrog.id} />
-                <button type="submit" class="w-20 h-20 flex items-center justify-center rounded-full bg-gradient-to-tr from-emerald-500 to-green-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:scale-105 transition-all active:scale-95 text-3xl border-4 border-black">
-                    💚
-                </button>
-            </form>
+        <div class="flex items-center gap-3">
+          <a
+            href="/logout"
+            class="px-4 py-2 text-xs font-bold text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500/30 border border-red-500/20 hover:border-red-500/50 rounded-full transition-all duration-300"
+          >
+            Déconnexion
+          </a>
+          <div class="relative group">
+            <div
+              class="absolute inset-0 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-full blur opacity-50 group-hover:opacity-75 transition-opacity"
+            >
+            </div>
+            <div
+              class="relative w-11 h-11 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center border-2 border-white/20 shadow-lg"
+            >
+              <span class="text-lg text-white font-bold"
+                >{user.username.charAt(0).toUpperCase()}</span
+              >
+            </div>
+          </div>
         </div>
+      </header>
+
+      <!-- Main Card -->
+      <div class="flex-1 min-h-0 relative w-full mx-auto md:max-w-sm">
+        <div
+          class="relative h-full rounded-3xl overflow-hidden shadow-2xl border border-cyan-500/20 group card-animate"
+        >
+          <!-- Success Message -->
+          {
+            message && (
+              <div
+                class="absolute top-4 left-1/2 -translate-x-1/2 z-20 px-5 py-3 rounded-full text-sm font-bold shadow-xl animate-bounce whitespace-nowrap
+                                bg-gradient-to-r from-cyan-500 to-blue-400 text-white border border-white/20"
+              >
+                <span class="flex items-center gap-2">
+                  <span class="text-lg">💙</span>
+                  {message}
+                </span>
+              </div>
+            )
+          }
+
+          <!-- Error Message -->
+          {
+            error && (
+              <div
+                class="absolute top-4 left-4 right-4 z-20 p-4 rounded-xl text-xs font-semibold shadow-xl
+                                bg-red-500/90 backdrop-blur-md text-white border border-red-400/30"
+              >
+                <div class="flex items-start gap-3">
+                  <span class="text-lg">⚠️</span>
+                  <span>{error}</span>
+                </div>
+              </div>
+            )
+          }
+
+          <!-- Frog Image -->
+          <img
+            src={currentFrog.url}
+            class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            alt="Grenouille"
+          />
+
+          <!-- Gradient Overlay -->
+          <div
+            class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"
+          >
+          </div>
+
+          <!-- Info Overlay -->
+          <div class="absolute bottom-0 left-0 w-full p-6">
+            <div class="flex items-end justify-between">
+              <div>
+                <p
+                  class="text-cyan-400 text-[10px] font-bold uppercase tracking-widest mb-1 flex items-center gap-2"
+                >
+                  <span class="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"
+                  ></span>
+                  Photographe
+                </p>
+                <h2
+                  class="text-xl font-black text-white mb-1 leading-tight drop-shadow-lg"
+                >
+                  {currentFrog.photographer}
+                </h2>
+              </div>
+              {
+                currentFrog.download && (
+                  <a
+                    href={currentFrog.download}
+                    target="_blank"
+                    rel="noopener"
+                    class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="2"
+                      stroke="currentColor"
+                      class="w-5 h-5 text-white"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                      />
+                    </svg>
+                  </a>
+                )
+              }
+            </div>
+          </div>
+
+          <!-- Card Corner Decoration -->
+          <div
+            class="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-slate-950/60 backdrop-blur-md border border-cyan-500/20"
+          >
+            <span class="text-xs font-bold text-cyan-300/70"
+              >#{currentFrog.id.slice(0, 6)}</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex-none mt-6 flex justify-center items-center gap-6 h-28">
+        <!-- Skip Button -->
+        <form method="POST" class="group">
+          <input type="hidden" name="action" value="next" />
+          <button
+            type="submit"
+            class="relative w-16 h-16 flex items-center justify-center rounded-full transition-all duration-300 btn-press
+                               bg-slate-900/80 backdrop-blur-md border-2 border-red-500/30
+                               hover:border-red-500 hover:bg-red-500/20 group-hover:neon-red"
+          >
+            <span class="text-2xl group-hover:scale-110 transition-transform"
+              >❌</span
+            >
+          </button>
+        </form>
+
+        <!-- Like Button -->
+        <form method="POST" class="group">
+          <input type="hidden" name="action" value="like" />
+          <input type="hidden" name="url" value={currentFrog.url} />
+          <input type="hidden" name="id" value={currentFrog.id} />
+          <button
+            type="submit"
+            class="relative w-20 h-20 flex items-center justify-center rounded-full transition-all duration-300 btn-press neon-blue
+                               bg-gradient-to-br from-cyan-400 to-blue-500 border-4 border-cyan-300/30
+                               hover:from-cyan-300 hover:to-blue-400 hover:scale-110 hover:rotate-6
+                               shadow-xl shadow-cyan-500/40"
+          >
+            <span
+              class="text-3xl group-hover:scale-125 transition-transform drop-shadow-lg"
+              >💙</span
+            >
+            <span
+              class="absolute inset-0 rounded-full bg-cyan-400/30 animate-ping opacity-50"
+            ></span>
+          </button>
+        </form>
+      </div>
     </main>
 
-    <nav class="fixed bottom-0 left-0 w-full bg-black/80 backdrop-blur-xl border-t border-white/5 flex justify-around py-4 z-50">
-        <a href="/" class="flex flex-col items-center gap-1 text-emerald-400">
-            <span class="text-xl">🏠</span>
-            <span class="text-[10px] font-bold">Accueil</span>
-        </a>
-        <a href="/favorites" class="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition">
-            <span class="text-xl">❤️</span>
-            <span class="text-[10px] font-bold">Favoris</span>
-        </a>
+    <!-- Bottom Navigation -->
+    <nav
+      class="fixed bottom-0 left-0 w-full bg-slate-950/80 backdrop-blur-xl border-t border-cyan-500/10 flex justify-around py-4 z-50"
+    >
+      <a href="/" class="flex flex-col items-center gap-1 text-cyan-400 group">
+        <div class="relative">
+          <span class="absolute -inset-2 bg-cyan-500/20 rounded-full blur-md"
+          ></span>
+          <span class="relative text-xl">🏠</span>
+        </div>
+        <span class="text-[10px] font-bold">Accueil</span>
+      </a>
+      <a
+        href="/favorites"
+        class="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors group"
+      >
+        <span class="text-xl group-hover:-translate-y-1 transition-transform"
+          >❤️</span
+        >
+        <span class="text-[10px] font-bold">Favoris</span>
+      </a>
+      <a
+        href="/social"
+        class="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors group"
+      >
+        <span class="text-xl group-hover:-translate-y-1 transition-transform"
+          >👥</span
+        >
+        <span class="text-[10px] font-bold">Social</span>
+      </a>
+      <a
+        href="/profile"
+        class="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors group"
+      >
+        <span class="text-xl group-hover:-translate-y-1 transition-transform"
+          >👤</span
+        >
+        <span class="text-[10px] font-bold">Profil</span>
+      </a>
     </nav>
 
-</body>
+    <!-- Celebration Container -->
+    <div
+      id="celebration-container"
+      class="fixed inset-0 pointer-events-none z-[100] overflow-hidden"
+    >
+    </div>
+
+    <script define:vars={{ hasMessage: !!message }}>
+      if (hasMessage) {
+        document.addEventListener("DOMContentLoaded", () =>
+          createCelebration(),
+        );
+        if (document.readyState !== "loading") createCelebration();
+      }
+
+      function createCelebration() {
+        const container = document.getElementById("celebration-container");
+        if (!container) return;
+        container.innerHTML = "";
+
+        const emojis = [
+          "💙",
+          "🐸",
+          "✨",
+          "🌟",
+          "💫",
+          "🎉",
+          "🌊",
+          "💧",
+          "🩵",
+          "⭐",
+        ];
+        const colors = [
+          "#06b6d4",
+          "#0ea5e9",
+          "#38bdf8",
+          "#7dd3fc",
+          "#22d3ee",
+          "#67e8f9",
+          "#a5f3fc",
+        ];
+
+        for (let burst = 0; burst < 3; burst++) {
+          setTimeout(() => {
+            for (let i = 0; i < 30; i++)
+              createConfetti(container, colors, i * 20);
+            for (let i = 0; i < 12; i++)
+              createEmojiParticle(container, emojis, i * 50);
+            for (let i = 0; i < 8; i++) createFloatingHeart(container, i * 100);
+          }, burst * 150);
+        }
+        createCenterBurst(container);
+        setTimeout(() => {
+          container.innerHTML = "";
+        }, 4000);
+      }
+
+      function createConfetti(container, colors, delay) {
+        const confetti = document.createElement("div");
+        const size = Math.random() * 10 + 5;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const startX = window.innerWidth / 2 + (Math.random() - 0.5) * 100;
+        const startY = window.innerHeight / 2;
+        const angle = Math.random() * Math.PI * 2;
+        const velocity = Math.random() * 400 + 200;
+        const endX = startX + Math.cos(angle) * velocity;
+        const endY = startY + Math.sin(angle) * velocity - 100;
+        const rotation = Math.random() * 720 - 360;
+
+        confetti.style.cssText = `
+          position: absolute; width: ${size}px; height: ${size}px; background: ${color};
+          border-radius: ${Math.random() > 0.5 ? "50%" : "2px"}; left: ${startX}px; top: ${startY}px;
+          opacity: 1; transform: rotate(0deg); animation: confetti-burst 1s ease-out ${delay}ms forwards;
+          --end-x: ${endX - startX}px; --end-y: ${endY - startY}px; --rotation: ${rotation}deg;
+        `;
+        container.appendChild(confetti);
+      }
+
+      function createEmojiParticle(container, emojis, delay) {
+        const particle = document.createElement("div");
+        const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+        const startX = window.innerWidth / 2;
+        const startY = window.innerHeight / 2;
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * 300 + 150;
+        const scale = Math.random() * 0.5 + 0.8;
+
+        particle.style.cssText = `
+          position: absolute; font-size: ${24 * scale}px; left: ${startX}px; top: ${startY}px;
+          opacity: 1; transform: scale(0); animation: emoji-burst 1.2s ease-out ${delay}ms forwards;
+          --end-x: ${Math.cos(angle) * distance}px; --end-y: ${Math.sin(angle) * distance - 50}px;
+        `;
+        particle.textContent = emoji;
+        container.appendChild(particle);
+      }
+
+      function createFloatingHeart(container, delay) {
+        const heart = document.createElement("div");
+        heart.style.cssText = `
+          position: absolute; font-size: ${Math.random() * 20 + 15}px;
+          left: ${Math.random() * window.innerWidth}px; bottom: -50px;
+          opacity: 0; animation: float-up 2.5s ease-out ${delay}ms forwards;
+        `;
+        heart.textContent = "💙";
+        container.appendChild(heart);
+      }
+
+      function createCenterBurst(container) {
+        const burst = document.createElement("div");
+        burst.style.cssText = `
+          position: absolute; left: ${window.innerWidth / 2}px; top: ${window.innerHeight / 2}px;
+          width: 0; height: 0; border-radius: 50%;
+          background: radial-gradient(circle, rgba(6, 182, 212, 0.6) 0%, transparent 70%);
+          transform: translate(-50%, -50%); animation: center-burst 0.6s ease-out forwards;
+        `;
+        container.appendChild(burst);
+      }
+    </script>
+
+    <style is:global>
+      @keyframes confetti-burst {
+        0% {
+          opacity: 1;
+          transform: translate(0, 0) rotate(0deg) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(var(--end-x), var(--end-y))
+            rotate(var(--rotation)) scale(0.5);
+        }
+      }
+      @keyframes emoji-burst {
+        0% {
+          opacity: 1;
+          transform: translate(0, 0) scale(0) rotate(0deg);
+        }
+        20% {
+          transform: translate(
+              calc(var(--end-x) * 0.2),
+              calc(var(--end-y) * 0.2)
+            )
+            scale(1.2) rotate(10deg);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(var(--end-x), var(--end-y)) scale(0.3)
+            rotate(-10deg);
+        }
+      }
+      @keyframes float-up {
+        0% {
+          opacity: 0;
+          transform: translateY(0) scale(0.5) rotate(-10deg);
+        }
+        20% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-100vh) scale(1.2) rotate(10deg);
+        }
+      }
+      @keyframes center-burst {
+        0% {
+          width: 0;
+          height: 0;
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.8;
+        }
+        100% {
+          width: 500px;
+          height: 500px;
+          opacity: 0;
+        }
+      }
+    </style>
+  </body>
 </html>
