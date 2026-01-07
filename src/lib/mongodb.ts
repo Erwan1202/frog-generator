@@ -1,6 +1,7 @@
 import { MongoClient, type MongoClientOptions } from 'mongodb';
 
-const uri = import.meta.env.MONGODB_URI;
+// Use process.env for runtime Docker environment variables
+const uri = process.env.MONGODB_URI || import.meta.env.MONGODB_URI;
 const options: MongoClientOptions = {};
 
 let client: MongoClient | undefined;
